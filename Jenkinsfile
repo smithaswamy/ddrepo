@@ -1,13 +1,25 @@
 pipeline {
-  agent {
-    dockerfile true
-}
-  stages {
-    stage('Build') {
-      steps {
-        echo "Docker success"
-        sh 'mvn -B'
-      }
+    agent any
+    environment {
+        IMAGE='/jenkins-alpine'
+        TAG='latest'
     }
-  }
- }
+    stages {
+        stage('Build') {
+            steps {
+                sh "docker build --pull -t ${IMAGE}:${TAG} ."
+            }
+        }
+        stage('Push to dockerhub') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'dockerPassword', usernameVariable: 'dockerUsername')]) {
+                    sh "docker login -u ${env.dockerUsername} -p ${env.dockerPassword}"
+                    sh "docker push ${env.IMAGE}:${TAG}"
+                }
+            }
+        }
+    }
+}
